@@ -4,9 +4,11 @@
         <meta charset="utf-8">
         <title>D3 Test</title>
         <script type="text/javascript" src="d3/d3.v3.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
         <link rel="stylesheet" type="text/css" href="styles.css" />
     </head>
     <body>
+      <p>Click on this text to update the chart with new data values.</p>
         <script type="text/javascript">
           var dataset = [];                        //Initialize empty array
           for (var i = 0; i < 25; i++) {           //Loop 25 times
@@ -14,26 +16,44 @@
             dataset.push(newNumber);             //Add new number to array
           }
 
-          var w = 500;
-          var h = 100;
-          var barPadding = 1;
+          var w = 600;
+          var h = 250;
+          var padding = 10;
 
           var svg = d3.select("body")
             .append("svg")
             .attr("width", w)
             .attr("height", h);
 
+          var xScale = d3.scale.ordinal()
+                .domain(d3.range(dataset.length))
+                .rangeRoundBands([0, w], 0.05);
+
+          var yScale = d3.scale.linear()
+              .domain([0, d3.max(dataset)])
+              .range([0, h]);
+
+          var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .orient("bottom")
+                .ticks(5);
+
+          var yAxis = d3.svg.axis()
+                  .scale(yScale)
+                  .orient("left")
+                  .ticks(5);
+
           svg.selectAll("rect")
              .data(dataset)
              .enter()
              .append("rect")
              .attr("x", function(d, i) {
-               return i * (w / dataset.length);
+               return xScale(i);         // <-- Set x values
              })
              .attr("y", function(d) {
                return h - (d * 4); //Height minus data value
               })
-             .attr("width", w / dataset.length - barPadding)
+             .attr("width", xScale.rangeBand())
              .attr("height", function(d) {
                 return d * 4;
               })
@@ -41,24 +61,66 @@
                 return "rgb(0, 0, " + (d * 10) + ")";
               });
 
-          svg.selectAll("text")
-           .data(dataset)
-           .enter()
-           .append("text")
-           .text(function(d) {
-             return d;
-           })
-           .attr("x", function(d, i) {
-             return i * (w / dataset.length) + (w / dataset.length - barPadding) / 2;
-           })
-           .attr("y", function(d) {
-             return h - (d * 4) + 14;  //15 is now 14
-           })
-           .attr("font-family", "sans-serif")
-           .attr("font-size", "11px")
-           .attr("fill", "white")
-           .attr("text-anchor", "middle");
+          //Create x-axis
+          svg.append("g")
+              .attr("class", "x axis")    // <-- Note x added here
+              .attr("transform", "translate(0," + h + ")")
+              .call(xAxis);
+
+          //Create y-axis
+          svg.append("g")
+              .attr("class", "y axis")    // <-- Note y added here
+              .attr("transform", "translate(" + padding + ",0)")
+              .call(yAxis);
+
+
+          d3.select("p")
+            .on("click", function() {
+
+              //New values for dataset
+              var numValues = dataset.length;               //Count original length of dataset
+              dataset = [];                                       //Initialize empty array
+              for (var i = 0; i < numValues; i++) {               //Loop numValues times
+                  var newNumber = Math.floor(Math.random() * 25); //New random integer (0-24)
+                  dataset.push(newNumber);                        //Add new number to array
+              }
+
+              yScale.domain([0, d3.max(dataset)]);
+
+
+              //Update all rects
+              svg.selectAll("rect")
+                 .data(dataset)
+                 .transition()
+                 .delay(1000)
+                 .delay(function(d, i) {
+                   return i / dataset.length * 1000;   // <-- Where the magic happens
+                 })
+                 .ease("linear")
+                 .attr("y", function(d) {
+                      return h - yScale(d);
+                 })
+                 .attr("height", function(d) {
+                      return yScale(d);
+                 });
+
+            //Update x-axis
+             svg.select(".x.axis")
+                 .transition()
+                 .duration(1000)
+                 .call(xAxis);
+
+             //Update y-axis
+             svg.select(".y.axis")
+                 .transition()
+                 .duration(1000)
+                 .call(yAxis);
+
+          });
+
+
 
         </script>
+
     </body>
 </html>
